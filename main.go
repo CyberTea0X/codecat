@@ -1,81 +1,27 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+
+	_ "embed"
 )
 
-// Маппинг языков к их расширениям
-var langToExtensions = map[string][]string{
-	"golang":      {".go"},
-	"typescript":  {".ts", ".tsx"},
-	"javascript":  {".js", ".jsx"},
-	"python":      {".py"},
-	"java":        {".java"},
-	"c++":         {".cpp", ".hpp", ".h"},
-	"ruby":        {".rb"},
-	"php":         {".php"},
-	"swift":       {".swift"},
-	"kotlin":      {".kt", ".kts"},
-	"rust":        {".rs"},
-	"sql":         {".sql"},
-	"c#":          {".cs"},
-	"c":           {".c", ".h"},
-	"bash":        {".sh"},
-	"powershell":  {".ps1"},
-	"scala":       {".scala"},
-	"r":           {".r"},
-	"perl":        {".pl"},
-	"dart":        {".dart"},
-	"lua":         {".lua"},
-	"groovy":      {".groovy"},
-	"assembly":    {".asm", ".s"},
-	"objective-c": {".m", ".mm"},
-	"json":        {".json"},
-	"yaml":        {".yaml", ".yml"},
-	"toml":        {".toml"},
-	"html":        {".html"},
-	"css":         {".css"},
+//go:embed config.json
+var defaultConfig []byte
+
+type Config struct {
+	Languages map[string][]string `json:"languages"`
+	Aliases   map[string]string   `json:"aliases"`
 }
 
-// Маппинг алиасов к основным названиям языков
-var aliasMap = map[string]string{
-	"ts":     "typescript",
-	"js":     "javascript",
-	"py":     "python",
-	"go":     "golang",
-	"java":   "java",
-	"cpp":    "c++",
-	"c++":    "c++",
-	"cc":     "c++",
-	"rb":     "ruby",
-	"php":    "php",
-	"swift":  "swift",
-	"kt":     "kotlin",
-	"kts":    "kotlin",
-	"rs":     "rust",
-	"sql":    "sql",
-	"cs":     "c#",
-	"c#":     "c#",
-	"c":      "c",
-	"h":      "c",
-	"sh":     "bash",
-	"ps1":    "powershell",
-	"scala":  "scala",
-	"r":      "r",
-	"pl":     "perl",
-	"dart":   "dart",
-	"lua":    "lua",
-	"groovy": "groovy",
-	"asm":    "assembly",
-	"s":      "assembly",
-	"objc":   "objective-c",
-	"mm":     "objective-c",
-	"m":      "objective-c",
-}
+var langToExtensions map[string][]string
+var aliasMap map[string]string
 
 // Тип для обработки множественных значений флага
 type sliceValue []string
@@ -89,7 +35,33 @@ func (s *sliceValue) String() string {
 	return strings.Join(*s, ",")
 }
 
+func loadConfig(configPath string) (*Config, error) {
+	var config Config
+
+	if configPath == "" {
+		// Используем embed-конфиг
+		err := json.Unmarshal(defaultConfig, &config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse embedded config: %v", err)
+		}
+	} else {
+		data, err := os.ReadFile(configPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read config file: %v", err)
+		}
+		err = json.Unmarshal(data, &config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse config: %v", err)
+		}
+	}
+
+	return &config, nil
+}
+
 func main() {
+	// Флаг для указания пути к конфигурационному файлу
+	configPath := flag.String("config", "", "path to config.json")
+
 	// Флаг для указания языков программирования
 	var langs sliceValue
 	flag.Var(&langs, "lang", "comma-separated list of programming languages to search for (supports aliases like ts, js, py, etc.)")
@@ -99,6 +71,16 @@ func main() {
 	flag.Var(&ignoreDirs, "I", "comma-separated list of directories to ignore")
 
 	flag.Parse()
+
+	// Загружаем конфигурацию
+	cfg, err := loadConfig(*configPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
+		os.Exit(1)
+	}
+
+	langToExtensions = cfg.Languages
+	aliasMap = cfg.Aliases
 
 	// Проверяем, указан ли хотя бы один язык
 	if len(langs) == 0 {
@@ -138,18 +120,16 @@ func main() {
 	rootDir := "."
 
 	// Рекурсивный обход директорий
-	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
 		// Пропускаем игнорируемые директории
 		if info.IsDir() {
-			for _, dir := range ignoreDirs {
-				if info.Name() == dir {
-					fmt.Fprintf(os.Stderr, "Skipping directory: %s\n", path)
-					return filepath.SkipDir
-				}
+			if slices.Contains(ignoreDirs, info.Name()) {
+				fmt.Fprintf(os.Stderr, "Skipping directory: %s\n", path)
+				return filepath.SkipDir
 			}
 		}
 
