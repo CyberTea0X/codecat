@@ -94,6 +94,10 @@ func main() {
 	var langs sliceValue
 	flag.Var(&langs, "lang", "comma-separated list of programming languages to search for (supports aliases like ts, js, py, etc.)")
 
+	// Флаг для игнорирования директорий
+	var ignoreDirs sliceValue
+	flag.Var(&ignoreDirs, "I", "comma-separated list of directories to ignore")
+
 	flag.Parse()
 
 	// Проверяем, указан ли хотя бы один язык
@@ -137,6 +141,16 @@ func main() {
 	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
+		}
+
+		// Пропускаем игнорируемые директории
+		if info.IsDir() {
+			for _, dir := range ignoreDirs {
+				if info.Name() == dir {
+					fmt.Fprintf(os.Stderr, "Skipping directory: %s\n", path)
+					return filepath.SkipDir
+				}
+			}
 		}
 
 		// Проверяем, является ли это файлом с нужным расширением
