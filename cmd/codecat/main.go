@@ -10,7 +10,7 @@ import (
 	"github.com/CyberTea0X/codecat/internal/walker"
 )
 
-const version = "1.0.0"
+const version = "v0.5.1"
 
 func main() {
 	// Настройка флагов
