@@ -1,3 +1,4 @@
+// internal/walker/walker.go
 package walker
 
 import (
@@ -12,6 +13,7 @@ import (
 )
 
 type Config struct {
+	RootDir    string // НОВОЕ ПОЛЕ для хранения корневой директории
 	ConfigPath string
 	SkipExt    string
 	MaxSize    string
@@ -30,8 +32,19 @@ type Walker struct {
 }
 
 func New(cfg *Config, configData *config.Config, langs, extFlag, ignoreDirs []string, ignoreFiles []string) (*Walker, error) {
+	// Убедимся, что RootDir установлен (на случай, если флаг не используется, хотя по умолчанию ".")
+	if cfg.RootDir == "" {
+		cfg.RootDir = "."
+	}
+	// Преобразуем в абсолютный путь или нормализуем
+	absRootDir, err := filepath.Abs(cfg.RootDir)
+	if err != nil {
+		return nil, fmt.Errorf("invalid root directory path: %w", err)
+	}
+	cfg.RootDir = absRootDir
+
 	w := &Walker{
-		cfg:        cfg,
+		cfg:        cfg, // Передаем cfg с заполненным RootDir
 		config:     configData,
 		extensions: make(map[string]bool),
 		rules:      rules.New(),
@@ -86,7 +99,13 @@ func New(cfg *Config, configData *config.Config, langs, extFlag, ignoreDirs []st
 }
 
 func (w *Walker) Run() error {
-	root := "."
+	// Используем директорию из конфига
+	root := w.cfg.RootDir
+
+	// Проверяем, существует ли директория
+	if _, err := os.Stat(root); os.IsNotExist(err) {
+		return fmt.Errorf("directory does not exist: %s", root)
+	}
 
 	if !w.cfg.Quiet && (w.cfg.Progress || isTerminal()) {
 		w.progress.Show()
@@ -95,10 +114,15 @@ func (w *Walker) Run() error {
 	var count int
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			// Может возникнуть ошибка доступа, продолжаем обход
+			fmt.Fprintf(os.Stderr, "Warning: skipping %s due to error: %v\n", path, err)
+			return nil // filepath.SkipDir или nil, зависит от желаемого поведения при ошибках
 		}
 		if info.IsDir() {
-			// ... тот же код ...
+			// Проверяем, нужно ли пропустить всю директорию
+			if w.rules.ShouldSkipDir(path) {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 

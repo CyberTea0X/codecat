@@ -1,3 +1,4 @@
+// cmd/codecat/main.go
 package main
 
 import (
@@ -14,7 +15,7 @@ const version = "v0.5.1"
 
 func main() {
 	// Настройка флагов
-	cfg := &walker.Config{}
+	cfg := &walker.Config{} // Этот cfg теперь будет содержать RootDir
 	var langsFlag, extFlag multiFlag
 	var ignoreDirs multiFlag
 	var ignoreFiles multiFlag
@@ -30,6 +31,7 @@ EXAMPLES:
     codecat -l go -l js
     codecat --ext .go,.js --limit 10
     codecat --skip-ext .o,.a --max-size 1MB
+    codecat -d /path/to/project go
 
 OPTIONS:
 `, version)
@@ -42,6 +44,9 @@ OPTIONS:
 	flag.Var(&extFlag, "ext", "File extensions to include (comma-separated)")
 	flag.Var(&ignoreDirs, "I", "Directories to ignore (comma-separated)")
 	flag.Var(&ignoreFiles, "i", "Files to ignore (comma-separated)")
+
+	// НОВЫЙ ФЛАГ -d
+	flag.StringVar(&cfg.RootDir, "d", ".", "Directory to scan") // Устанавливаем "." по умолчанию
 
 	flag.StringVar(&cfg.ConfigPath, "config", "", "Path to config.json")
 	flag.StringVar(&cfg.SkipExt, "skip-ext", "", "Extensions to skip (comma-separated)")
