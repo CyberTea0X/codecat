@@ -3,7 +3,7 @@
 ## Install
 
 ```
-go install github.com/CyberTea0X/codecat@latest
+go install github.com/CyberTea0X/codecat/cmd/codecat@v0.5.0
 ```
 
 ## Usage
