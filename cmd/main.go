@@ -51,7 +51,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if ignoreDirs == nil {
+	if len(ignoreDirs) == 0 {
 		ignoreDirs = cfg.IgnoreDirs
 	}
 
