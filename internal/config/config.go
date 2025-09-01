@@ -7,8 +7,10 @@ import (
 )
 
 type Config struct {
-	Languages map[string][]string `json:"languages"`
-	Aliases   map[string]string   `json:"aliases"`
+	Languages    map[string][]string `json:"languages"`
+	Aliases      map[string]string   `json:"aliases"`
+	IgnoreHidden bool                `json:"ignore_hidden"`
+	IgnoreDirs   []string            `json:"ignore_dirs"`
 }
 
 // Load загружает конфиг:

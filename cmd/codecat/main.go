@@ -29,6 +29,8 @@ func main() {
 
 	var langs sliceValue
 	flag.Var(&langs, "lang", "comma-separated list of programming languages to search for")
+	ignoreHidden := flag.Bool("hidden", false, "include hidden files/dirs")
+	rootDir := flag.String("d", ".", "root directory to scan (default \".\")")
 
 	var ignoreDirs sliceValue
 	flag.Var(&ignoreDirs, "I", "comma-separated list of directories to ignore")
@@ -49,8 +51,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	if ignoreDirs == nil {
+		ignoreDirs = cfg.IgnoreDirs
+	}
+
+	if ignoreHidden == nil {
+		ignoreHidden = &cfg.IgnoreHidden
+	}
+
 	// --- Поиск и вывод файлов ---
-	if err := finder.PrintFiles(".", extensions, ignoreDirs); err != nil {
+	if err := finder.PrintFiles(*rootDir, extensions, ignoreDirs, *ignoreHidden); err != nil {
 		fmt.Fprintf(os.Stderr, "Error walking the path: %v\n", err)
 		os.Exit(1)
 	}

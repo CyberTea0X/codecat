@@ -10,13 +10,20 @@ import (
 )
 
 // PrintFiles рекурсивно выводит содержимое файлов с нужными расширениями.
-func PrintFiles(root string, exts []string, ignoreDirs []string) error {
+func PrintFiles(root string, exts []string, ignoreDirs []string, ignoreHiddlen bool) error {
 	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		if d.IsDir() {
+			if strings.HasPrefix(d.Name(), ".") {
+				if ignoreHiddlen {
+					return filepath.SkipDir
+				}
+				fmt.Fprintf(os.Stderr, "Skipping hidden directory: %s\n", path)
+				return nil
+			}
 			if slices.Contains(ignoreDirs, d.Name()) {
 				fmt.Fprintf(os.Stderr, "Skipping directory: %s\n", path)
 				return filepath.SkipDir
