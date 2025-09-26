@@ -30,7 +30,7 @@
     "toml": [".toml"],
     "html": [".html"],
     "css": [".css"],
-    "gd": [.gd]
+    "gd": [".gd"]
   },
   "aliases": {
     "ts": "typescript",
