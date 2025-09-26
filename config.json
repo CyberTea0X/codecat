@@ -29,7 +29,8 @@
     "yaml": [".yaml", ".yml"],
     "toml": [".toml"],
     "html": [".html"],
-    "css": [".css"]
+    "css": [".css"],
+    "gd": [.gd]
   },
   "aliases": {
     "ts": "typescript",
