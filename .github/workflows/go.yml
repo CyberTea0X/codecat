@@ -1,28 +1,59 @@
-# This workflow will build a golang project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
-
-name: Go
+# .github/workflows/release.yaml
+name: Release
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+  packages: write
 
 jobs:
-
-  build:
+  # Этап 1: Тестирование и проверка сборки (опционально, но рекомендуется)
+  test:
+    name: Test and Validate
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+      - name: Run tests
+        run: go test -v ./...
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.24.3'
-
-    - name: Build
-      run: go build -v ./...
-
-    - name: Test
-      run: go test -v ./...
+  # Этап 2: Релиз под все платформы
+  release:
+    name: Release Binaries
+    needs: test  # Запускается только если тесты прошли
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: "386"
+          - goos: windows
+            goarch: amd64
+          - goos: windows
+            goarch: "386"
+          - goos: darwin
+            goarch: amd64
+          # darwin/arm64 тоже можно добавить, если нужно
+          # - goos: darwin
+          #   goarch: arm64
+      fail-fast: false  # Продолжать даже если одна платформа упала
+    steps:
+      - uses: actions/checkout@v4
+      - uses: wangyoucao577/go-release-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
+          # Опционально: укажи версию Go, если нужно
+          # goversion: '1.22'
+          # Опционально: добавь LICENSE и README
+          # extra_files: LICENSE README.md
+          # Опционально: включить sha256
+          sha256sum: true
