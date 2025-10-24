@@ -1,18 +1,17 @@
 # .github/workflows/release.yaml
-name: Release
+name: Auto Release on Tag
 
 on:
-  release:
-    types: [created]
+  push:
+    tags:
+      - 'v*'  # Триггерится только при пуше тега, начинающегося с 'v', например: v1.0.0
 
 permissions:
   contents: write
-  packages: write
 
 jobs:
-  # Этап 1: Тестирование и проверка сборки (опционально, но рекомендуется)
   test:
-    name: Test and Validate
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,10 +21,9 @@ jobs:
       - name: Run tests
         run: go test -v ./...
 
-  # Этап 2: Релиз под все платформы
   release:
     name: Release Binaries
-    needs: test  # Запускается только если тесты прошли
+    needs: test
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -40,10 +38,7 @@ jobs:
             goarch: "386"
           - goos: darwin
             goarch: amd64
-          # darwin/arm64 тоже можно добавить, если нужно
-          # - goos: darwin
-          #   goarch: arm64
-      fail-fast: false  # Продолжать даже если одна платформа упала
+      fail-fast: false
     steps:
       - uses: actions/checkout@v4
       - uses: wangyoucao577/go-release-action@v1
@@ -51,9 +46,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
-          # Опционально: укажи версию Go, если нужно
-          # goversion: '1.22'
-          # Опционально: добавь LICENSE и README
+          # Опционально: добавь файлы
           # extra_files: LICENSE README.md
-          # Опционально: включить sha256
           sha256sum: true
